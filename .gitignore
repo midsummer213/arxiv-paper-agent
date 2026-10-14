@@ -1,0 +1,4 @@
+.env
+sent_papers.txt
+*.log
+__pycache__/
