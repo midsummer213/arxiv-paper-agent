@@ -1,8 +1,8 @@
 name: Daily Paper Crawler
 on:
   schedule:
-    # UTC时间 01:00  = 北京时间 09:00 每天早上9点执行
-    - cron: '0 1 * * *'
+    # UTC 09:00  = 北京时间 17:00（下午5点）
+    - cron: '0 9 * * *'
   # 网页手动触发测试
   workflow_dispatch:
 
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true # 允许提交文件回仓库
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,3 +32,12 @@ jobs:
           MAIL_RECEIVER: ${{ secrets.MAIL_RECEIVER }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         run: python paper_agent.py
+
+      # 自动把更新后的sent_paper_ids.txt提交回仓库
+      - name: Commit updated paper id record
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add sent_paper_ids.txt
+          git commit -m "auto update sent paper ids [skip ci]" || echo "No new paper id to commit"
+          git push
