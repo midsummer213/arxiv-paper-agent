@@ -5,6 +5,10 @@ on:
     - cron: '0 9 * * *'
   workflow_dispatch:
 
+# ⚠️ 必须加这一行，赋予 GITHUB_TOKEN 写入权限
+permissions:
+  contents: write
+
 jobs:
   run-crawler:
     runs-on: ubuntu-latest
@@ -34,8 +38,24 @@ jobs:
 
       - name: Commit updated paper id record
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add sent_paper_ids.txt
-          git commit -m "auto update sent paper ids [skip ci]" || echo "No new paper id to commit"
-          git push
+          # 使用 --local 避免污染全局配置
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 如果文件不存在，说明首次运行没生成，跳过提交防止报错
+          if [ -f sent_paper_ids.txt ]; then
+            git add sent_paper_ids.txt
+            
+            # 如果没有变动，跳过 commit 和 push
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "auto update sent paper ids [skip ci]"
+              
+              # 同步远程代码，防止冲突
+              git pull --rebase origin main
+              git push
+            fi
+          else
+            echo "sent_paper_ids.txt not found, skip commit."
+          fi
